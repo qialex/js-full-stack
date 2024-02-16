@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 
+import authService from '../services/auth/auth.service'
+
 const Header: React.FC = () => {
   
   const router = useRouter()
@@ -18,7 +20,7 @@ const Header: React.FC = () => {
   useEffect(() => {
     setIsSignUp(isAuthPage('up'))
     setIsSignIn(isAuthPage('in'))
-  }, [router])  
+  }, [router, authService])  
 
   return <header >
     <section className={`${styles.container} ${styles['is-family-primary']}`}>

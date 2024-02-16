@@ -158,6 +158,9 @@ export default function Home() {
       // Handle response if necessary
       const responseData = await response.json()
       console.log(responseData)
+      // {"id":17,"email":"t@t.te"}
+      // {"name":"DB_23505","message":"email_already_exist"}
+      
       if (responseData.id && responseData.email) {
         // authService.user.id = responseData.id
         // authService.user.email = responseData.email     
