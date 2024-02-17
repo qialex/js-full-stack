@@ -53,6 +53,8 @@
     "@typescript-eslint/parser": "^6.13.2",
     "babel-jest": "^29.4.1",
     "bulma": "^0.9.4",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
     "cypress": "^13.0.0",
     "eslint": "~8.48.0",
     "eslint-config-next": "14.0.4",

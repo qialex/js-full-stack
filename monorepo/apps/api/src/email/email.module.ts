@@ -34,6 +34,11 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
       })
     }),    
   ],
-  providers: [EmailService],
+  providers: [
+    EmailService,
+  ],
+  exports: [
+    EmailService,
+  ],
 })
 export class EmailModule {}

@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { DataSource } from 'typeorm'
 import { User } from './user.entity';
 import { EncryptService, SaltHashEncrypted } from './../../../encrypt'
-
+import { AuthReqDto, AuthResDto } from '@monorepo/lib-common'
 
 @Injectable()
 export class UserService {
@@ -15,12 +15,13 @@ export class UserService {
     private encryptService: EncryptService,
   ) {}
 
-  async addOne(user: User): Promise<User|Error> {
-    let result: User|Error
+  async addOne(authReqDto: AuthReqDto): Promise<AuthResDto|Error> {
+    let result: AuthResDto|Error
+    const user: User = {...authReqDto} as User
     let queryRunner
     try {
       // Encrypt password
-      const saltHashEncrypted: SaltHashEncrypted = this.encryptService.encryptPassword(user.password)
+      const saltHashEncrypted: SaltHashEncrypted = this.encryptService.encryptPassword(authReqDto.password)
       user.password = saltHashEncrypted.hash
       user.salt = saltHashEncrypted.salt
 
@@ -28,9 +29,11 @@ export class UserService {
       await queryRunner.connect()
       await queryRunner.startTransaction()
 
-      result = await this.usersRepository.save({ ...user })
-      result = {id: result.id, email: result.email} as User
-      
+      const usersRepositorySave: User = await this.usersRepository.save(user)
+      if (usersRepositorySave) {
+        result = {id: usersRepositorySave.id, email: usersRepositorySave.email, token: ''}
+      }
+
       await queryRunner.commitTransaction()
     } catch (e) {
       if (queryRunner) {

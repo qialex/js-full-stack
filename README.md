@@ -6,13 +6,16 @@ To demonstrate different aspects of full stack development with javascript
 ## Features
 1. Docker
 2. Docker-compose
-3. Next.js 
-4. React.js
-5. Bulma scss
-6. Nest.js
-7. Postgres
-8. pgAdmin
-9. NGINX
+3. NX
+4. Next.js 
+5. React.js
+6. Redux
+7. RxJs
+8. Bulma
+9. Nest.js
+10. Postgres
+11. pgAdmin
+12. NGINX
 
 <!-- ### Demo
 

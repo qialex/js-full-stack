@@ -29,13 +29,3 @@ export class User {
   @Column()
   ts_created: Date;
 }
-
-
-export class CreateUserDTO {
-  id: number;
-  email: string;
-  password: string;
-  salt: string;
-  is_email_confirmed: number;
-  ts_created: Date;
-}
