@@ -7,7 +7,7 @@ import { useDispatch } from 'react-redux'
 import { connect } from 'react-redux'
 import { selectAuth, logout } from '../store/features/user/user-slice'
 
-const HeaderRight: React.FC = ({isAuth, user, logoutLocal}: any) => {
+const HeaderRight: React.FC = ({isAuth, user}: any) => {
   const dispatch = useDispatch()
 
   function checkPath(pathname: any, params: any, logoutLocal: any): any {
@@ -37,9 +37,6 @@ const HeaderRight: React.FC = ({isAuth, user, logoutLocal}: any) => {
   }, [pathname, params, searchParams] );  
 
   const handleLogoutClick = () => {
-    console.log('handleLogoutClick')
-    // logoutLocal()
-    // dispatch(logoutLocal())
     dispatch<any>(logout(null))
   }
 
@@ -84,4 +81,4 @@ const HeaderRight: React.FC = ({isAuth, user, logoutLocal}: any) => {
           </div>
 };
 // export default HeaderRight
-export default connect(selectAuth, {logoutLocal: logout})(HeaderRight)
+export default connect(selectAuth)(HeaderRight)

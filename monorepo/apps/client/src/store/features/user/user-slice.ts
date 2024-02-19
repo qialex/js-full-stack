@@ -1,11 +1,23 @@
-import { createSlice, buildCreateSlice, asyncThunkCreator } from '@reduxjs/toolkit'
-import { Selector } from '@reduxjs/toolkit'
-import { emptyAuthDto, AuthDto, AuthUserReqDto } from '@monorepo/lib-common'
+import { buildCreateSlice, asyncThunkCreator } from '@reduxjs/toolkit'
+import { AuthUserDto, AuthDto, AuthUserReqDto, TokenDto } from '@monorepo/lib-common'
 
 
 export interface UserState extends AuthDto{};
 
-const userInitialState: UserState = emptyAuthDto
+export const emptyTokenDto: TokenDto = {
+  token: '',    
+  expiresAt: 0,
+}
+export const userInitialState: UserState = {
+  user: {
+    email: '',
+    id: 0,
+  } as AuthUserDto,
+  token: {
+    access: {...emptyTokenDto} as TokenDto,
+    refresh: {...emptyTokenDto} as TokenDto,
+  },
+}
 
 const createSliceWithThunks = buildCreateSlice({
   creators: {
@@ -63,13 +75,10 @@ const userSlice = createSliceWithThunks({
           // state.loading = true
         },
         rejected: (state, action) => {
-          console.log(action)
           // state.loading = false
         },
         fulfilled: (state, action) => {
           // state = action.payload
-          console.log(state)
-          console.log(action)
           if (action.payload && action.payload.user && action.payload.token) {
             state.user = {...action.payload.user}
             state.token = {
@@ -102,8 +111,6 @@ const userSlice = createSliceWithThunks({
         },
         fulfilled: (state, action) => {
           // state = action.payload
-          console.log(state)
-          console.log(action)
           if (action.payload && action.payload.user && action.payload.token) {
             state.user = {...action.payload.user}
             state.token = {
@@ -155,20 +162,11 @@ const userSlice = createSliceWithThunks({
           // state.loading = false
         },
         fulfilled: (state, action) => {
-          console.log(state)
-          console.log(action)
           state.user = {...userInitialState.user}
           state.token = {
               access: {...userInitialState.token.access},
               refresh: {...userInitialState.token.refresh},
           }
-          // state = {
-          //   user: {...userInitialState.user},
-          //   token: {
-          //     access: {...userInitialState.token.access},
-          //     refresh: {...userInitialState.token.refresh},
-          //   },
-          // } as UserState
         },
       }
     ),         

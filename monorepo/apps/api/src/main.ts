@@ -12,7 +12,6 @@ async function bootstrap() {
   app.enableCors()
 
   await app.listen(port).then((_value) => {
-    // console.log(process.env)
     console.log(`Server started at http://localhost:${port}`)
   });
 

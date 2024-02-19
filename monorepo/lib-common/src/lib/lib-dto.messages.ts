@@ -1,3 +1,4 @@
+import { IsEmail, IsNotEmpty, MinLength, IsNumber, IsString } from 'class-validator';
 /*
 const example = {
   error: "Some error description"
@@ -5,9 +6,11 @@ const example = {
   statusCode: 409
 } */
 
-export interface ErrorDto {
-  error: string,
-  message: string,
+export class ErrorDto {
+  @IsString()
+  error: string
+  @IsString()
+  message: string
 }
 
 export const messagesDto = {

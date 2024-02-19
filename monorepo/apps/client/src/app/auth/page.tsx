@@ -1,10 +1,28 @@
 "use client"
 import { useEffect, useState, FormEvent, SyntheticEvent, ChangeEvent } from 'react'
-import { usePathname, useSearchParams, useParams } from 'next/navigation'
-import { useDispatch } from 'react-redux'
-import { AuthDto, messagesDto, AuthUserReqDto } from '@monorepo/lib-common'
+import { usePathname, useSearchParams, useParams, useRouter } from 'next/navigation'
+import { useDispatch, connect } from 'react-redux'
+import { AuthDto, messagesDto, AuthUserReqDto, PasswordDto, SignUpFormDto } from '@monorepo/lib-common'
 import { AuthField, authFieldInitial, AuthFieldP } from '../../components/auth-field'
-import { signUp, signIn } from '../../store/features/user/user-slice'
+import { signUp, signIn, selectAuth } from '../../store/features/user/user-slice'
+
+
+import {
+  validate,
+  validateSync,
+  validateOrReject,
+  Contains,
+  IsInt,
+  Length,
+  IsEmail,
+  IsFQDN,
+  IsDate,
+  Min,
+  Max,
+} from 'class-validator';
+
+// import {AuthUserReqDto} from 
+
 
 
 export interface AuthState {
@@ -33,7 +51,19 @@ export const authStateInitial: AuthState =  {
   }
 }
 
-export default function Home() {
+function AuthPage({isAuth}: any) {
+
+  const dispatch = useDispatch()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const params = useParams()
+
+  // if we are authorised, we don't need auth page
+  if (isAuth) {
+    router.push('/')
+  }  
+
   function checkPath(pathname: any, params: any, searchParams: any): any {
     let isAuthPage, isSignUp, isSignIn, isRestore = false
     if (pathname === '/auth') {
@@ -48,11 +78,6 @@ export default function Home() {
     return {isAuthPage, isSignUp, isSignIn, isRestore}
   }
 
-  const dispatch = useDispatch()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const params = useParams()
-
   const pathProps = checkPath(pathname, params, searchParams)
 
   const [authState, setAuthState] = useState<AuthState>({
@@ -60,8 +85,8 @@ export default function Home() {
     ...pathProps,
     fields: {
       email: {...authFieldInitial, name: 'email', label: 'Email', placeholder: 'Email'},
-      password: {...authFieldInitial, name: 'password', label: 'Password', placeholder: 'Password'},
-      pwdRetype: {...authFieldInitial, name: 'pwdRetype', label: 'Confirm password', placeholder: 'Confirm password'},
+      password: {...authFieldInitial, name: 'password', label: 'Password', placeholder: 'Password', type: 'password'},
+      pwdRetype: {...authFieldInitial, name: 'pwdRetype', label: 'Confirm password', placeholder: 'Confirm password', type: 'password'},
     }
   });
 
@@ -71,53 +96,60 @@ export default function Home() {
   }, [pathname, params, searchParams] );    
 
 
-  const validateEmail = (email: string) => {
-    return String(email)
-      .toLowerCase()
-      .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      );
-  };
+  function validation(): boolean {
+    let allGood = true
+    let validationFields: any
+    if (authState.isSignIn) {
+      validationFields = new AuthUserReqDto()
+    }
 
+    if (authState.isSignUp) {
+      validationFields = new SignUpFormDto()
+      validationFields.pwdRetype = authState.fields.pwdRetype.value      
+    }
+
+    validationFields.password = authState.fields.password.value
+    validationFields.email = authState.fields.email.value    
+
+    let validations: any[] = validateSync(validationFields)
+    allGood = allGood && !validations.length
+
+    const newState = {...authState}
+    validations.forEach((validation: any) => {
+      (newState.fields as any)[validation.property].error = Object.values(validation.constraints).join(' ')
+    })
+
+    if (!validations.length && authState.isSignUp && validationFields.password !== validationFields.pwdRetype) {
+      allGood = false
+      newState.fields.pwdRetype.error = 'Passwords should match'
+    }
+    if (!allGood) {
+      setAuthState(newState)
+    } else {
+      newState.fields.email.error =  ''
+      newState.fields.password.error = ''
+      newState.fields.pwdRetype.error = ''
+      setAuthState(newState)
+    }
+
+    return allGood;    
+  }
+  
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    console.dir(event);
-    // if (isLoading) {
-    //   return;
-    // }
-    // const data = new FormData()
-    // Object.entries(formData).forEach(([key, value]) => {
-    //   console.log(key, value)
-    //   data.append(key, value);
-    // })
+    if (authState.isLoading) {
+      return
+    } 
 
-    // const dataDto: AuthReqDto = {
-    //   email: formData.email,
-    //   password: formData.password,
-    // }
-    // console.log(data.values)
-    // console.log(data.values())
-    // for (const v of formData.values()) {
-    //   console.log(v);
-    // }    
-
-    // if (validateEmail(formData['email'])) {
-    //   setIsValidationError(false)
-    //   setError({element: '', text: ''})
-    // } else {
-    //   setIsValidationError(true)
-    //   setError({element: 'email', text: 'please enter a valid email'})
-    //   return;      
-    // }
-    
-    // setIsLoading(true) // Set loading to true when the request starts
-
-     
-
-    const authUserReqDto: AuthUserReqDto = {
-      email: authState.fields.email.value,
-      password: authState.fields.password.value,
+    if (!validation()) {
+      return;
     }
+
+
+
+    setAuthState({...authState, isLoading: true})
+
+    const authUserReqDto: AuthUserReqDto = {email: authState.fields.email.value, password: authState.fields.password.value} as AuthUserReqDto
     dispatch<any>((authState.isSignUp ? signUp : signIn)(authUserReqDto))
     .unwrap()
     .then((originalPromiseResult: any) => {
@@ -127,15 +159,15 @@ export default function Home() {
     .catch((rejectedValueOrSerializedError: any) => {
       console.log(rejectedValueOrSerializedError)
     })
+    .finally(() => {
+      setAuthState({...authState, isLoading: false})
+    })
   }
 
   // handle change value
   function handleInput (event: ChangeEvent<HTMLInputElement>)  {
-    console.log(event)
     const fieldName = event.target.name
     const fieldValue = event.target.value
-    console.log(fieldName, fieldValue)
-    console.log(authState)
 
     setAuthState((prevState: AuthState) => {
       const state: AuthState = {...prevState} as AuthState;
@@ -145,49 +177,8 @@ export default function Home() {
   }   
 
   function handleBlur(event: ChangeEvent<HTMLInputElement>): void {
-    console.log(event)
-    // if (event.target.value) {
-    //   if (validateEmail(event.target.value)) {
-    //     setIsValidationError(false)
-    //     setError({element: '', text: ''})
-    //   } else {
-    //     setIsValidationError(true)
-    //     setError({element: 'email', text: 'please enter a valid email'})
-    //     return;      
-    //   }
-    // }
+    // console.log(event)
   }
-
-  // async function onRefreshTokenClick(event: any) {
-  //   event.preventDefault()
-
-  //   const token: string = user['token']
-  //   const response = await fetch('http://localhost:3001/auth/token', {
-  //     method: 'POST',
-  //     headers: {
-  //       'mode': 'cors',
-  //       'Accept': 'application/json',
-  //       'Content-Type': 'application/json',
-  //       'Authorization': `Bearer ${token}`
-  //     },        
-  //   })
-  //   console.log(response)
-  // }
-  // async function onRefreshTokenClick2(event: any) {
-  //   event.preventDefault()
-
-  //   const token: string = user['token']
-  //   const response = await fetch('http://localhost:3001/auth/token', {
-  //     method: 'POST',
-  //     headers: {
-  //       'mode': 'cors',
-  //       'Accept': 'application/json',
-  //       'Content-Type': 'application/json',
-  //       'Authorization': `Bearer ${token}`
-  //     },        
-  //   })
-  //   console.log(response)
-  // }
 
   return (
     <>
@@ -229,7 +220,8 @@ export default function Home() {
                                   name={item.name}
                                   value={item.value}
                                   error={item.error}
-                                  isLoading={item.isLoading}
+                                  // isLoading={item.isLoading}
+                                  isLoading={authState.isLoading}
                                   isValid={item.isValid}
                                   isTouched={item.isTouched}
                                   handleBlur={handleBlur}
@@ -261,3 +253,4 @@ export default function Home() {
     </>
   )
 }
+export default connect(selectAuth)(AuthPage)

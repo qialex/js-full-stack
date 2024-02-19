@@ -8,6 +8,8 @@ import { EmailService } from '../../email/email.service'
 import { AuthService } from './auth.service'
 import { AuthGuard, Public } from './auth.guard';
 
+// TODO: need to refactor to use RxJs
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -20,7 +22,7 @@ export class AuthController {
   @Public()
   @Post('sign-up')
   async signUp(
-    @Body(new ValidationPipe({whitelist: true})) body: AuthUserReqDto,
+    @Body(new ValidationPipe({whitelist: false})) body: AuthUserReqDto,
   ): Promise<AuthDto|Error|any> {    
     // DB
     const addOneResult: AuthUserDto|Error = await this.userService.addOne(body);
@@ -38,9 +40,11 @@ export class AuthController {
 
       if (!tokenResultAccess.token || !tokenResultAccess.expiresAt) {
         throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultAccess, description: messagesDto.INTERNAL_ERROR.error })
+        return
       }
       if (!tokenResultRefresh.token || !tokenResultRefresh.expiresAt) {
         throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultRefresh, description: messagesDto.INTERNAL_ERROR.error })
+        return
       }      
 
       // Send email
@@ -59,17 +63,20 @@ export class AuthController {
     }
   }
 
+  // TODO : fix issue
   @Public()
   @Post('sign-in')
   async signIn(
-    @Body(new ValidationPipe({whitelist: true})) body: AuthUserReqDto,
+    @Body(new ValidationPipe({whitelist: false})) body: AuthUserReqDto,
   ): Promise<any|Error> {
     const findOneResult: AuthUserDto|ErrorDto = await this.userService.findOne(body.email, body.password)
 
     if (findOneResult['error'] === messagesDto.USER_NOT_FOUNT) {
       throw new ConflictException(messagesDto.USER_NOT_FOUNT.message, { description: messagesDto.USER_NOT_FOUNT.error })
+      return
     } else if (findOneResult['error'] === messagesDto.WRONG_PASSWORD) {
       throw new ConflictException(messagesDto.WRONG_PASSWORD.message, { description: messagesDto.WRONG_PASSWORD.error })
+      return
     }
 
     // JWT
@@ -95,12 +102,12 @@ export class AuthController {
   @UseGuards(AuthGuard)  
   @Post('token')
   async token(
-    @Body() body: any,
+    @Body(new ValidationPipe({whitelist: false})) body: any,
     @Req() req: Request,
   ): Promise<any|Error> {
 
     // TODO: check if user exists
-    
+
     // TODO: generate new tokens
 
     return {r: req['user'], o: {...req['jwt_options']}, b: {...body}}
