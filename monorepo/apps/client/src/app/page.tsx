@@ -6,10 +6,10 @@ export default async function Index() {
         <section className='hero'>
           <div className='hero-body'>
             <p className='title'>
-              Not gerular sign in / sign up flow
+              Sign up / log in
             </p>
             <p className='subtitle'>
-              Single form managing authentication process
+              Full stack flow
             </p>
           </div>
         </section>

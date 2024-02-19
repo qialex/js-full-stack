@@ -1,33 +1,119 @@
-import { Body, Controller, Post, Req, ValidationPipe } from '@nestjs/common'
-import { AuthReqDto, AuthResDto } from '@monorepo/lib-common'
+import { Body, Controller, Post, Req, Res, ValidationPipe, UseGuards, HttpStatus, BadRequestException, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common'
+import { AuthUserReqDto, AuthUserDto, AuthDto, messagesDto, TokenDto, ErrorDto } from '@monorepo/lib-common'
+import { Response } from 'express';
 
 import { UserService } from '../../db/entities/user/user.service'
+import { DbService } from '../../db/db.service'
 import { EmailService } from '../../email/email.service'
+import { AuthService } from './auth.service'
+import { AuthGuard, Public } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly emailService: EmailService,
     private readonly userService: UserService,
+    private readonly dbService: DbService,
+    private readonly authService: AuthService,
   ) {}
 
+  @Public()
   @Post('sign-up')
-  // async signUn(@Body() body: AuthReqDto): Promise<AuthResDto|Error> {
-  async index(@Body(new ValidationPipe({whitelist: true})) body: AuthReqDto) {    
-    const res: AuthResDto|Error = await this.userService.addOne(body);
-    // if (user['id'] && user['email']) {
-      // send email
-      // const welcomeVerifyEmail = await this.emailService.welcomeVerifyEmail(user['email']) 
-    // }
+  async signUp(
+    @Body(new ValidationPipe({whitelist: true})) body: AuthUserReqDto,
+  ): Promise<AuthDto|Error|any> {    
+    // DB
+    const addOneResult: AuthUserDto|Error = await this.userService.addOne(body);
 
-    // return {...body} as AuthResDto
-    return res
-    // return {id: 1, email: body.email || '', token: '1'} as AuthResDto
+    if (!addOneResult['id'] && !addOneResult['email']) {
+      if (this.dbService.checkErrorIfUniqueViolation(addOneResult as Error)) {
+        throw new ConflictException(messagesDto.AUTH_EMAIL_ALREADY_EXISTS.message, { cause: addOneResult, description: messagesDto.AUTH_EMAIL_ALREADY_EXISTS.error })
+      } else {
+        throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: addOneResult, description: messagesDto.INTERNAL_ERROR.error })
+      }
+    } else {
+      // JWT
+      const tokenResultAccess: TokenDto|Error = this.authService.getJWT(addOneResult['id'], addOneResult['email'], 'access');
+      const tokenResultRefresh: TokenDto|Error = this.authService.getJWT(addOneResult['id'], addOneResult['email'], 'refresh');
+
+      if (!tokenResultAccess.token || !tokenResultAccess.expiresAt) {
+        throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultAccess, description: messagesDto.INTERNAL_ERROR.error })
+      }
+      if (!tokenResultRefresh.token || !tokenResultRefresh.expiresAt) {
+        throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultRefresh, description: messagesDto.INTERNAL_ERROR.error })
+      }      
+
+      // Send email
+      // Special case. We don't need to wait because no matter whether email was sent or not we need to return user their credentials
+      this.emailService.welcomeVerifyEmail(addOneResult['email'])
+        .then(() => {})
+        .catch(() => {/*only need to log errors*/})
+
+      return {
+        user: addOneResult as AuthUserDto,
+        token: {
+          access: tokenResultAccess as TokenDto,
+          refresh: tokenResultRefresh as TokenDto,
+        }
+      } as AuthDto
+    }
   }
 
-  // @Post('sign-in')
-  // async signIn(@Body() body: UserDto): Promise<UserDto|Error> {
-  //   // return this.userService.findOne(body.email, body.password)
-  //   return body
-  // }  
+  @Public()
+  @Post('sign-in')
+  async signIn(
+    @Body(new ValidationPipe({whitelist: true})) body: AuthUserReqDto,
+  ): Promise<any|Error> {
+    const findOneResult: AuthUserDto|ErrorDto = await this.userService.findOne(body.email, body.password)
+
+    if (findOneResult['error'] === messagesDto.USER_NOT_FOUNT) {
+      throw new ConflictException(messagesDto.USER_NOT_FOUNT.message, { description: messagesDto.USER_NOT_FOUNT.error })
+    } else if (findOneResult['error'] === messagesDto.WRONG_PASSWORD) {
+      throw new ConflictException(messagesDto.WRONG_PASSWORD.message, { description: messagesDto.WRONG_PASSWORD.error })
+    }
+
+    // JWT
+    const tokenResultAccess: TokenDto|Error = this.authService.getJWT(findOneResult['id'], findOneResult['email'], 'access');
+    const tokenResultRefresh: TokenDto|Error = this.authService.getJWT(findOneResult['id'], findOneResult['email'], 'refresh');
+
+    if (!tokenResultAccess.token || !tokenResultAccess.expiresAt) {
+      throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultAccess, description: messagesDto.INTERNAL_ERROR.error })
+    }
+    if (!tokenResultRefresh.token || !tokenResultRefresh.expiresAt) {
+      throw new InternalServerErrorException(messagesDto.INTERNAL_ERROR.message, { cause: tokenResultRefresh, description: messagesDto.INTERNAL_ERROR.error })
+    }    
+
+    return {
+      user: findOneResult as AuthUserDto,
+      token: {
+        access: tokenResultAccess as TokenDto,
+        refresh: tokenResultRefresh as TokenDto,
+      }
+    } as AuthDto
+  }  
+
+  @UseGuards(AuthGuard)  
+  @Post('token')
+  async token(
+    @Body() body: any,
+    @Req() req: Request,
+  ): Promise<any|Error> {
+
+    // TODO: check if user exists
+    
+    // TODO: generate new tokens
+
+    return {r: req['user'], o: {...req['jwt_options']}, b: {...body}}
+  }  
+
+  @UseGuards(AuthGuard)  
+  @Post('logout')
+  logout(
+    @Res() res: Response,
+  ): void {
+
+    // TODO: do some logout things
+
+    res.status(200).json({status: true}).send()
+  }    
 }

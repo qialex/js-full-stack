@@ -1,121 +1,76 @@
 "use client"
-
-import Head from 'next/head'
-import Image from 'next/image'
-
 import { useEffect, useState, FormEvent, SyntheticEvent, ChangeEvent } from 'react'
-// import React, { useState, FormEvent } from 'react'
-
-// import { useRouter } from 'next/router'
-// import Link from "next/link"
-// import { redirect } from 'next/navigation'
-
-// import authService, { setAuthService2 } from '../../services/auth/auth.service'
-// const [authService, setAuthService] = useState<AuthService>(new AuthService());
-// const authService = new AuthService()
-// export default authService
-// export const setAuthService2 = setAuthService
+import { usePathname, useSearchParams, useParams } from 'next/navigation'
+import { useDispatch } from 'react-redux'
+import { AuthDto, messagesDto, AuthUserReqDto } from '@monorepo/lib-common'
+import { AuthField, authFieldInitial, AuthFieldP } from '../../components/auth-field'
+import { signUp, signIn } from '../../store/features/user/user-slice'
 
 
+export interface AuthState {
+  isLoading: boolean,
+  isAuthPage: boolean,
+  isSignUp: boolean,
+  isSignIn: boolean,
+  isRestore: boolean,
+  fields: {
+    email: AuthFieldP,
+    password: AuthFieldP,
+    pwdRetype: AuthFieldP,
+  }
+}
 
-import { AuthReqDto } from '@monorepo/lib-common'
+export const authStateInitial: AuthState =  {
+  isLoading: false,
+  isAuthPage: false,
+  isSignUp: false,
+  isSignIn: false,
+  isRestore: false,
+  fields: {
+    email: {...authFieldInitial},
+    password: {...authFieldInitial},
+    pwdRetype: {...authFieldInitial},
+  }
+}
 
 export default function Home() {
+  function checkPath(pathname: any, params: any, searchParams: any): any {
+    let isAuthPage, isSignUp, isSignIn, isRestore = false
+    if (pathname === '/auth') {
+      isAuthPage = true
+    }    
+    if (pathname === '/auth' &&  searchParams.get('sign') === 'in') {
+      isSignIn = true
+    }
+    if (pathname === '/auth' &&  searchParams.get('sign') === 'up') {
+      isSignUp = true
+    }
+    return {isAuthPage, isSignUp, isSignIn, isRestore}
+  }
 
-  const authState = {
-    isSignUp: true,
-    isSignIn: true,
-    isLoading: false,
-  }  
+  const dispatch = useDispatch()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const params = useParams()
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    password2: "",
+  const pathProps = checkPath(pathname, params, searchParams)
+
+  const [authState, setAuthState] = useState<AuthState>({
+    ...authStateInitial,
+    ...pathProps,
+    fields: {
+      email: {...authFieldInitial, name: 'email', label: 'Email', placeholder: 'Email'},
+      password: {...authFieldInitial, name: 'password', label: 'Password', placeholder: 'Password'},
+      pwdRetype: {...authFieldInitial, name: 'pwdRetype', label: 'Confirm password', placeholder: 'Confirm password'},
+    }
   });
 
-  const handleInput = (e: any) => {
-    const fieldName = e.target.name;
-    const fieldValue = e.target.value;
+  useEffect(() => {
+    const pathProps = checkPath(pathname, params, searchParams)  
+    setAuthState({...authState, ...pathProps})   
+  }, [pathname, params, searchParams] );    
 
-    setFormData((prevState) => ({
-      ...prevState,
-      [fieldName]: fieldValue
-    }));
-  }  
 
-  
-  // const router = useRouter()
-
-  const [users, setUsers] = useState([])
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [isValidationError, setIsValidationError] = useState<boolean>(false)
-  const [error, setError] = useState<{element: string, text: string}>({element: '', text: ''})
-
-  // const isAuthPage = (type: string): boolean => {
-  //   return router.asPath === `/auth?sign=${type}`
-  // }
-
-  // const [isSignUp, setIsSignUp] = useState<boolean>(false)
-  // // const [isSignIn, setIsSignIn] = useState<boolean>(false)
-
-  // useEffect(() => {
-  //   setIsSignUp(isAuthPage('up'))
-  // }, [router])    
-
-  // const router = useRouter()
-  // whatever
-  // const doSomething = () => router.replace('sign')  
-  // const doSomething = () => {
-  //   // redirect('/sign', 'push')  
-  //   // redirect('/sign')
-  //   // router.push("/sign")
-  //   router.push({
-  //     pathname: '/auth',
-  //     query: { 'sign': 'in' }
-  // })
-  // }
-  // redirect
-  
-
-  // router.push({
-  //   pathname: '/sign',
-  //   query: { name: 'Someone' }
-  // })  
-
-  // useEffect(() => {
-  //   fetch('http://localhost:3001/students', {
-  //     headers: {
-  //       mode: 'cors'
-  //     }
-  //   })
-  //     .then((response: Response) => response.json())
-  //     .then((users: any) => {
-  //       setUsers(users)
-  //     })
-  //     .finally(() => {
-  //       setTimeout(() => {
-  //         doSomething()
-  //       }, 2000)
-        
-  //     })
-  // }, [])
-
-  // useEffect(() => {
-  //   fetch('http://localhost:3001/user/authenticate', {
-  //     method: 'POST',
-  //     headers: {
-  //       mode: 'cors',
-  //     }
-  //   })
-  //   .then((response: Response) => response.json())
-  //   .then((responseData: any) => {
-  //     console.log(responseData);
-  //   })
-  //   .then((users: any) => {
-  //     setUsers(users)
-  //   })
-  // }, [])
   const validateEmail = (email: string) => {
     return String(email)
       .toLowerCase()
@@ -130,16 +85,16 @@ export default function Home() {
     // if (isLoading) {
     //   return;
     // }
-    const data = new FormData()
-    Object.entries(formData).forEach(([key, value]) => {
-      console.log(key, value)
-      data.append(key, value);
-    })
+    // const data = new FormData()
+    // Object.entries(formData).forEach(([key, value]) => {
+    //   console.log(key, value)
+    //   data.append(key, value);
+    // })
 
-    const dataDto: AuthReqDto = {
-      email: formData.email,
-      password: formData.password,
-    }
+    // const dataDto: AuthReqDto = {
+    //   email: formData.email,
+    //   password: formData.password,
+    // }
     // console.log(data.values)
     // console.log(data.values())
     // for (const v of formData.values()) {
@@ -155,42 +110,41 @@ export default function Home() {
     //   return;      
     // }
     
-    setIsLoading(true) // Set loading to true when the request starts
- 
-    try {
-      // const formData = new FormData(event.currentTarget)
-      const response = await fetch(`http://localhost:3001/auth/sign-${authState.isSignUp ? 'up' : 'in'}`, {
-        
-        method: 'POST',
-        headers: {
-          'mode': 'cors',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },        
-        // body: JSON.stringify({a: 'b'}),
-        // body:  JSON.stringify(dataDto),
-        body: JSON.stringify(dataDto),
-        
-      })
- 
-      // Handle response if necessary
-      const responseData = await response.json()
-      console.log(responseData)
-      if (responseData.id && responseData.email) {
-        // authService.user.id = responseData.id
-        // authService.user.email = responseData.email     
-        // setAuthService2({user: {id: responseData.id, email: responseData.email}, isAuthorised: true})
-      } 
-      // ...
-    } catch (error) {
-      // Handle error if necessary
-      console.error(error)
-    } finally {
-      setIsLoading(false) // Set loading to false when the request completes
+    // setIsLoading(true) // Set loading to true when the request starts
+
+     
+
+    const authUserReqDto: AuthUserReqDto = {
+      email: authState.fields.email.value,
+      password: authState.fields.password.value,
     }
+    dispatch<any>((authState.isSignUp ? signUp : signIn)(authUserReqDto))
+    .unwrap()
+    .then((originalPromiseResult: any) => {
+      // setUser({...user, token: originalPromiseResult.token.access.token})
+      console.log(originalPromiseResult)
+    })
+    .catch((rejectedValueOrSerializedError: any) => {
+      console.log(rejectedValueOrSerializedError)
+    })
   }
 
-  function emailOnBlur(event: ChangeEvent<HTMLInputElement>): void {
+  // handle change value
+  function handleInput (event: ChangeEvent<HTMLInputElement>)  {
+    console.log(event)
+    const fieldName = event.target.name
+    const fieldValue = event.target.value
+    console.log(fieldName, fieldValue)
+    console.log(authState)
+
+    setAuthState((prevState: AuthState) => {
+      const state: AuthState = {...prevState} as AuthState;
+      (state.fields as any)[fieldName].value = fieldValue;
+      return state;
+    })
+  }   
+
+  function handleBlur(event: ChangeEvent<HTMLInputElement>): void {
     console.log(event)
     // if (event.target.value) {
     //   if (validateEmail(event.target.value)) {
@@ -204,6 +158,36 @@ export default function Home() {
     // }
   }
 
+  // async function onRefreshTokenClick(event: any) {
+  //   event.preventDefault()
+
+  //   const token: string = user['token']
+  //   const response = await fetch('http://localhost:3001/auth/token', {
+  //     method: 'POST',
+  //     headers: {
+  //       'mode': 'cors',
+  //       'Accept': 'application/json',
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `Bearer ${token}`
+  //     },        
+  //   })
+  //   console.log(response)
+  // }
+  // async function onRefreshTokenClick2(event: any) {
+  //   event.preventDefault()
+
+  //   const token: string = user['token']
+  //   const response = await fetch('http://localhost:3001/auth/token', {
+  //     method: 'POST',
+  //     headers: {
+  //       'mode': 'cors',
+  //       'Accept': 'application/json',
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `Bearer ${token}`
+  //     },        
+  //   })
+  //   console.log(response)
+  // }
 
   return (
     <>
@@ -229,27 +213,43 @@ export default function Home() {
 
                   <div className='card-content'>    
                     <form onSubmit={onSubmit}>
-                      <div className='field' >
-                        <label className='label'>Email <span className={`is-size-7 has-text-danger ${error.element !=='email' ? 'is-hidden' : ''}`}> - {error.text}</span></label>
-                        <div className={`control is-flex ${authState.isLoading ? 'is-loading' : ''}`}>
-                          <input name='email' onChange={handleInput} onBlur={emailOnBlur} value={formData.email} className={`input ${isValidationError ? 'is-danger' : ''}`} type="text" placeholder="Email" disabled={isLoading} />
-                        </div>
-                      </div>  
-                      <div className='field' >
-                        <label className='label'>Password</label>
-                        <div className={`control is-flex ${isLoading ? 'is-loading' : ''}`}>
-                          <input name='password' onChange={handleInput} value={formData.password} className='input' type="password" placeholder="Password" disabled={isLoading} />
-                        </div>
-                      </div>      
-                      <div className={`field ${authState.isSignUp ? '' : 'is-hidden'}`} >
-                        <label className='label'>Retype password</label>
-                        <div className={`control is-flex ${isLoading ? 'is-loading' : ''}`}>
-                          <input name='password2' onChange={handleInput} value={formData.password2} className='input' type="password" placeholder="Retype password" disabled={isLoading} />
-                        </div>
-                      </div>                        
+                      {Object.keys(authState.fields).map((key) => {
+
+                        if (authState.isSignIn && key === 'pwdRetype') {
+                          return <div key={key}></div>
+                        }
+
+                        const item: AuthFieldP = {...(authState.fields as any)[key]};
+
+                        return <AuthField 
+                                  key={key}
+                                  label={item.label}
+                                  placeholder={item.placeholder}
+                                  type={item.type}
+                                  name={item.name}
+                                  value={item.value}
+                                  error={item.error}
+                                  isLoading={item.isLoading}
+                                  isValid={item.isValid}
+                                  isTouched={item.isTouched}
+                                  handleBlur={handleBlur}
+                                  handleInput={handleInput}
+                                  />
+                      })}
+                      
+
                       <div className='field' >
                         <button className={`button is-primary`} disabled={authState.isLoading}>{authState.isSignUp ? 'Sign up' : 'Log in'}</button>
-                      </div>                
+                      </div>             
+                      {/* { 
+                        (user && user.token) &&
+
+                          <div className='field'>
+                            <button className='button is-primary' disabled={authState.isLoading} onClick={onRefreshTokenClick}>Refresh token</button>
+                            <button className='button is-primary' disabled={authState.isLoading} onClick={onRefreshTokenClick2}>Refresh token bad</button>
+                          </div>  
+                      } */}
+                           
                     </form>
                   </div>
                 </div>
@@ -257,23 +257,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-        
-
-
-
-
-
-        {/* <div>
-          {users.map((user: any) => {
-            return (
-              <div key={`user-${user.id}`}>
-                <span>#{user.id} {user.name}</span><br />
-              </div>
-            )
-          })}
-        </div> */}
-
-
       </main>
     </>
   )

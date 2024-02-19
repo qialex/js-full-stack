@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { DataSource } from 'typeorm'
 import { User } from './user.entity';
 import { EncryptService, SaltHashEncrypted } from './../../../encrypt'
-import { AuthReqDto, AuthResDto } from '@monorepo/lib-common'
+import { AuthUserReqDto, AuthUserDto, messagesDto, ErrorDto } from '@monorepo/lib-common'
 
 @Injectable()
 export class UserService {
@@ -15,8 +15,8 @@ export class UserService {
     private encryptService: EncryptService,
   ) {}
 
-  async addOne(authReqDto: AuthReqDto): Promise<AuthResDto|Error> {
-    let result: AuthResDto|Error
+  async addOne(authReqDto: AuthUserReqDto): Promise<AuthUserDto|Error> {
+    let result: AuthUserDto|Error
     const user: User = {...authReqDto} as User
     let queryRunner
     try {
@@ -31,7 +31,7 @@ export class UserService {
 
       const usersRepositorySave: User = await this.usersRepository.save(user)
       if (usersRepositorySave) {
-        result = {id: usersRepositorySave.id, email: usersRepositorySave.email, token: ''}
+        result = {id: usersRepositorySave.id, email: usersRepositorySave.email}
       }
 
       await queryRunner.commitTransaction()
@@ -39,12 +39,7 @@ export class UserService {
       if (queryRunner) {
         await queryRunner.rollbackTransaction()
       }
-
-      if (e.driverError.code == 23505) {
-        result = {name: 'DB_23505', message: 'email_already_exist'}
-      } else {
-        result = e
-      }
+      result = e
     } finally {
       if (queryRunner) {
         await queryRunner.release()
@@ -54,15 +49,16 @@ export class UserService {
     return result
   }  
 
-  async findOne(email: string, password: string): Promise<User|Error> {
+  async findOne(email: string, password: string): Promise<AuthUserDto|ErrorDto> {
     const user: User = await this.usersRepository.findOneBy({ email })
     if (!user) {
-      return {id: 0, email: ''} as User
+      return messagesDto.USER_NOT_FOUNT
     }
     const isPasswordMatch = this.encryptService.checkPassword(password, user.salt, user.password)
 
-    return isPasswordMatch ? {id: user.id, email: user.email} as User : {name: 'AUTH_1', message: 'wrong_password'} as Error
+    return isPasswordMatch ? {id: user.id, email: user.email} as AuthUserDto : messagesDto.WRONG_PASSWORD
   }
+
 
   // findAll(): Promise<User[]> {
   //   return this.usersRepository.find();

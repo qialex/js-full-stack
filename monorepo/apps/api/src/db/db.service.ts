@@ -2,12 +2,18 @@ import { Injectable } from '@nestjs/common'
 // import { DataSource } from 'typeorm'
 // import { User } from './entities/user.entity'
 
+const ERROR_UNIQUE_VIOLATION: number = 23505
+
 @Injectable()
 export class DbService {
 
   constructor(
     // private dataSource: DataSource,
   ) {}
+
+  checkErrorIfUniqueViolation(error: any): boolean {
+    return String(ERROR_UNIQUE_VIOLATION) === String(error['driverError']['code'])
+  }
   
   // async addUser(email: string, password: string) {
   //   const queryRunner = this.dataSource.createQueryRunner()

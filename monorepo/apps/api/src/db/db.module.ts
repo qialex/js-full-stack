@@ -28,6 +28,11 @@ import { DbService } from './db.service'
       }),
     }),
   ],
-  providers: [DbService],
+  providers: [
+    DbService,
+  ],
+  exports: [
+    DbService
+  ]
 })
 export class DbModule {}

@@ -1,27 +1,8 @@
-// components/Header.tsx
+// components/header.tsx
 import React from 'react'
-import Link from 'next/link'
-// import { useRouter } from 'next/router'
-// import { useEffect, useState } from 'react'
+import HeaderRight from './header-right'
 
 const Header: React.FC = () => {
-  
-  // const router = useRouter()
-
-  // const isAuthPage = (type: string): boolean => {
-  //   return router.asPath === `/auth?sign=${type}`
-  // }
-
-  // const [isSignUp, setIsSignUp] = useState<boolean>(false)
-  // const [isSignIn, setIsSignIn] = useState<boolean>(false)
-
-  // useEffect(() => {
-  //   setIsSignUp(isAuthPage('up'))
-  //   setIsSignIn(isAuthPage('in'))
-  // }, [router, authService])  
-
-  const isSignUp = false
-  const isSignIn = false
 
   return <header >
     <section className='container is-family-primary'>
@@ -56,27 +37,11 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className='navbar-menu'>
-          <div className='navbar-end'>
-            <div className='navbar-item'>
-              <div className='field is-grouped'>
-                <p className='control'>
-                </p>
-                <div className='buttons'>
-                  <Link href="/auth?sign=up" className={`button is-primary ${isSignUp ? 'is-hidden' : ''}`}>
-                    <strong>Sign up</strong>
-                  </Link>
-                  <Link href="/auth?sign=in" className={`button is-light ${isSignIn ? 'is-hidden' : ''}`}>
-                    Log in
-                  </Link>
-                </div>                
-              </div>
-            </div>
-          </div>
-        </div>
+        <HeaderRight />
+
       </nav>
     </section>
-  </header>;
+  </header>
 };
 
-export default Header;
+export default Header
