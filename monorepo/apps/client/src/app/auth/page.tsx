@@ -53,16 +53,20 @@ export const authStateInitial: AuthState =  {
 
 function AuthPage({isAuth}: any) {
 
+  // if we are authorised, we don't need auth page
+  useEffect(() => {
+    if (isAuth) {
+      router.push('/')
+    }      
+  }, [isAuth]);
+
   const dispatch = useDispatch()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
   const params = useParams()
 
-  // if we are authorised, we don't need auth page
-  if (isAuth) {
-    router.push('/')
-  }  
+
 
   function checkPath(pathname: any, params: any, searchParams: any): any {
     let isAuthPage, isSignUp, isSignIn, isRestore = false
@@ -178,6 +182,10 @@ function AuthPage({isAuth}: any) {
 
   function handleBlur(event: ChangeEvent<HTMLInputElement>): void {
     // console.log(event)
+  }
+
+  if (isAuth) {
+    return <></>
   }
 
   return (

@@ -1,6 +1,6 @@
 import { buildCreateSlice, asyncThunkCreator } from '@reduxjs/toolkit'
 import { AuthUserDto, AuthDto, AuthUserReqDto, TokenDto } from '@monorepo/lib-common'
-
+import { useFetchWrapper } from 'apps/client/src/services/fetch-wrapper.function'
 
 export interface UserState extends AuthDto{};
 
@@ -25,17 +25,24 @@ const createSliceWithThunks = buildCreateSlice({
   },
 });
 
-const defautltApiUrl = 'http://localhost:3001'
+
 
 const userSlice = createSliceWithThunks({
   name: 'user',
+  // initialState: (webStorage.getUserState() || {
+  //   user: {...userInitialState.user},
+  //   token: {
+  //     access: {...userInitialState.token.access},
+  //     refresh: {...userInitialState.token.refresh},
+  //   },
+  // }) as UserState,
   initialState: {
     user: {...userInitialState.user},
     token: {
       access: {...userInitialState.token.access},
       refresh: {...userInitialState.token.refresh},
     },
-  } as UserState,
+  } as UserState,  
   selectors: {
     selectSlice: state => state,
     selectAuth: state => ({
@@ -59,15 +66,7 @@ const userSlice = createSliceWithThunks({
     // ),
     signUp: create.asyncThunk(
       async (authUserReqDto: AuthUserReqDto) => {
-        const res = await fetch(`${process.env.API_URL_FOR_CLIENT || defautltApiUrl}/auth/sign-up`, {
-          method: 'POST',
-          headers: {
-            'mode': 'cors',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },        
-          body: JSON.stringify(authUserReqDto),
-        })
+        const res = await useFetchWrapper().signIn(authUserReqDto)
         return (await res.json()) as AuthDto
       },
       {
@@ -80,26 +79,22 @@ const userSlice = createSliceWithThunks({
         fulfilled: (state, action) => {
           // state = action.payload
           if (action.payload && action.payload.user && action.payload.token) {
+            // // saving to a localStorage
+            // webStorage.saveUserState(action.payload)
+
             state.user = {...action.payload.user}
             state.token = {
               access: {...action.payload.token.refresh},
               refresh: {...action.payload.token.refresh},
             }
+            
           }
         },
       }
     ),
     signIn: create.asyncThunk(
       async (authUserReqDto: AuthUserReqDto) => {
-        const res = await fetch(`${process.env.API_URL_FOR_CLIENT || defautltApiUrl}/auth/sign-in`, {
-          method: 'POST',
-          headers: {
-            'mode': 'cors',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },        
-          body: JSON.stringify(authUserReqDto),
-        })
+        const res = await useFetchWrapper().signIn(authUserReqDto)
         return (await res.json()) as AuthDto
       },
       {
@@ -112,6 +107,9 @@ const userSlice = createSliceWithThunks({
         fulfilled: (state, action) => {
           // state = action.payload
           if (action.payload && action.payload.user && action.payload.token) {
+            // // saving to a localStorage
+            // webStorage.saveUserState(action.payload)
+
             state.user = {...action.payload.user}
             state.token = {
               access: {...action.payload.token.refresh},
@@ -122,9 +120,10 @@ const userSlice = createSliceWithThunks({
       }
     ),    
     tokenUpdate: create.asyncThunk(
-      async (id: string, thunkApi) => {
-        const res = await fetch(`myApi/todos?id=${id}`)
-        // return (await res.json()) as Item
+      async (arg, { getState }) => {
+        const stateUser: UserState = (getState() as any).user as UserState;
+        const res = await useFetchWrapper().logout({}, stateUser.token.access.token)
+        return (await res.json())
       },
       {
         pending: (state) => {
@@ -143,15 +142,7 @@ const userSlice = createSliceWithThunks({
       // async (authUserReqDto: AuthUserReqDto) => {
       async (arg, { getState }) => {
         const stateUser: UserState = (getState() as any).user as UserState;
-        const res = await fetch(`${process.env.API_URL_FOR_CLIENT || defautltApiUrl}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'mode': 'cors',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${stateUser.token.access.token}`
-          },
-        })
+        const res = await useFetchWrapper().token({}, stateUser.token.access.token)
         return (await res.json())
       },
       {
