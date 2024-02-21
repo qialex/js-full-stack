@@ -100,8 +100,7 @@ function AuthPage({isAuth}: any) {
   }, [pathname, params, searchParams] );    
 
 
-  function validation(): boolean {
-    let allGood = true
+  function getValidation(): any {
     let validationFields: any
     if (authState.isSignIn) {
       validationFields = new AuthUserReqDto()
@@ -116,24 +115,45 @@ function AuthPage({isAuth}: any) {
     validationFields.email = authState.fields.email.value    
 
     let validations: any[] = validateSync(validationFields)
-    allGood = allGood && !validations.length
+    return {validationFields, validations}
+  }
 
+  function validationOnSubmit(): boolean {
+    let allGood = true
     const newState = {...authState}
+    newState.fields.email.isTouched =  true
+    newState.fields.password.isTouched =  true
+    newState.fields.pwdRetype.isTouched =  true
+
+    const {validationFields, validations} = getValidation()
+
     validations.forEach((validation: any) => {
+      
+      if (allGood) {
+        (newState.fields as any)[validation.property].autoFocus = true
+      }
       (newState.fields as any)[validation.property].error = Object.values(validation.constraints).join(' ')
+      allGood = false;
     })
 
-    if (!validations.length && authState.isSignUp && validationFields.password !== validationFields.pwdRetype) {
-      allGood = false
-      newState.fields.pwdRetype.error = 'Passwords should match'
+    if (authState.isSignUp) {
+      if (!validations.length && authState.isSignUp && validationFields.password !== validationFields.pwdRetype) {
+        allGood = false
+        newState.fields.pwdRetype.error = 'Passwords should match'
+      }
     }
+
     if (!allGood) {
       setAuthState(newState)
     } else {
       newState.fields.email.error =  ''
+      newState.fields.email.autoFocus = false
       newState.fields.password.error = ''
+      newState.fields.email.autoFocus = false
       newState.fields.pwdRetype.error = ''
+      newState.fields.email.autoFocus = false
       setAuthState(newState)
+      
     }
 
     return allGood;    
@@ -145,7 +165,7 @@ function AuthPage({isAuth}: any) {
       return
     } 
 
-    if (!validation()) {
+    if (!validationOnSubmit()) {
       return;
     }
 
@@ -176,12 +196,76 @@ function AuthPage({isAuth}: any) {
     setAuthState((prevState: AuthState) => {
       const state: AuthState = {...prevState} as AuthState;
       (state.fields as any)[fieldName].value = fieldValue;
+
+      const {validationFields, validations} = getValidation()
+      const validationItem: any = validations.find((validation: any) => validation.property === event.target.name) 
+
+      if (fieldName === 'pwdRetype') {
+        if (validationItem && state.fields.password.value.startsWith(fieldValue)) {
+          const pwdValidationItem: any = validations.find((validation: any) => validation.property === 'password') 
+          if (pwdValidationItem) {
+            (state.fields as any)[fieldName].error = Object.values(validationItem.constraints).join(' ');
+            (state.fields as any)[fieldName].isValid = false;
+          } else {
+            (state.fields as any)[fieldName].error = '';
+            (state.fields as any)[fieldName].isValid = false;
+            (state.fields as any)[fieldName].isTouched = true;
+          }
+        } else if (validationItem && !state.fields.password.value.startsWith(fieldValue)) {
+          (state.fields as any)[fieldName].error = "Passwords need match";
+          (state.fields as any)[fieldName].isValid = false;          
+        } else if (!validationItem && !state.fields.password.value.startsWith(fieldValue)) {
+          (state.fields as any)[fieldName].error = "Passwords need match";
+          (state.fields as any)[fieldName].isValid = false;        
+        } else {
+          (state.fields as any)[fieldName].error = '';
+          (state.fields as any)[fieldName].isValid = true;
+          (state.fields as any)[fieldName].isTouched = true;
+        }
+      } else {
+        if (validationItem) {
+          (state.fields as any)[fieldName].error = Object.values(validationItem.constraints).join(' ');
+          (state.fields as any)[fieldName].isValid = false;
+        } else {
+          (state.fields as any)[fieldName].error = '';
+          (state.fields as any)[fieldName].isValid = true;
+          (state.fields as any)[fieldName].isTouched = true;
+
+          if (state.isSignUp && fieldName === 'password') {
+            if (state.fields.pwdRetype.error && state.fields.password.value === state.fields.pwdRetype.value) {
+              state.fields.pwdRetype.error = ''
+              state.fields.pwdRetype.isValid = true
+            } 
+            if (!state.fields.pwdRetype.error && state.fields.password.value !== state.fields.pwdRetype.value) {
+              state.fields.pwdRetype.error = "Passwords need match";
+              state.fields.pwdRetype.isValid = false;      
+            }
+          }
+        }
+      }
+
       return state;
     })
+    
+
   }   
 
   function handleBlur(event: ChangeEvent<HTMLInputElement>): void {
-    // console.log(event)
+    const fieldName = event.target.name
+    if (!(authState.fields as any)[fieldName].isTouched) {
+      setAuthState((prevState: AuthState) => {
+        const state: AuthState = {...prevState} as AuthState;
+        (state.fields as any)[fieldName].isTouched = true;
+        return state;
+      })
+    }
+    if ((authState.fields as any)[fieldName].autoFocus) {
+      setAuthState((prevState: AuthState) => {
+        const state: AuthState = {...prevState} as AuthState;
+        (state.fields as any)[fieldName].autoFocus = false;
+        return state;
+      })
+    }    
   }
 
   if (isAuth) {
@@ -228,12 +312,12 @@ function AuthPage({isAuth}: any) {
                                   name={item.name}
                                   value={item.value}
                                   error={item.error}
-                                  // isLoading={item.isLoading}
                                   isLoading={authState.isLoading}
                                   isValid={item.isValid}
                                   isTouched={item.isTouched}
                                   handleBlur={handleBlur}
                                   handleInput={handleInput}
+                                  autoFocus={item.autoFocus}
                                   />
                       })}
                       
@@ -253,6 +337,15 @@ function AuthPage({isAuth}: any) {
                     </form>
                   </div>
                 </div>
+              </div>
+              <div className='is-one-third'>
+                {
+                  authState.isSignUp && <h1>Already have an account? Log in</h1>
+                }
+                {
+                  authState.isSignIn && <h1>Need a new account? Sign up</h1>
+                }                
+                <h1>Forgot password?</h1>
               </div>
             </div>
           </div>
