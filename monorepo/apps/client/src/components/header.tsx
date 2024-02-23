@@ -1,6 +1,7 @@
 // components/header.tsx
 import React from 'react'
 import HeaderRight from './header-right'
+import AuthHoc from './auth-hoc'
 
 const Header: React.FC = () => {
 
@@ -37,7 +38,10 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        <HeaderRight />
+        <AuthHoc>
+          <HeaderRight />
+        </AuthHoc>
+        
 
       </nav>
     </section>

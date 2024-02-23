@@ -45,9 +45,8 @@ const userSlice = createSliceWithThunks({
   } as UserState,  
   selectors: {
     selectSlice: state => state,
-    selectAuth: state => ({
-      isAuth: Boolean(state.user && state.user.email && state.user.id && state.token && state.token.access && state.token.access.token && (state.token.access.expiresAt > (new Date().getTime() / 1000))),
-      user: state.user,
+    selectAuthenticated: state => ({
+      isAuthenticated: Boolean(state.user && state.user.email && state.user.id && state.token && state.token.access && state.token.access.token && (state.token.access.expiresAt > (new Date().getTime() / 1000))),
     }), 
   },  
   reducers: (create) => ({
@@ -165,7 +164,7 @@ const userSlice = createSliceWithThunks({
 })
 
 export const { signUp, signIn, tokenUpdate, logout } = userSlice.actions
-export const { selectSlice, selectAuth } = userSlice.selectors
+export const { selectSlice, selectAuthenticated } = userSlice.selectors
 export const userReducer = userSlice.reducer
 
 
